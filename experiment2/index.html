@@ -72,12 +72,20 @@
 
             const layout = d3.layout.cloud()
                 .size([width, height])
-                .words(relationshipTopics.map(d => ({...d, size: 14 + Math.random() * 24})))
+                .words(relationshipTopics.map(d => ({
+                    ...d,
+                    size: 12 + Math.random() * 28,
+                    x: Math.random() * width - width / 2,
+                    y: Math.random() * height - height / 2,
+                    rotate: Math.random() * 360,
+                    vx: Math.random() * 2 - 1,
+                    vy: Math.random() * 2 - 1,
+                    vr: Math.random() * 2 - 1
+                })))
                 .padding(2)
-                .rotate(() => Math.random() * 180 - 90)
                 .font("Arial")
                 .fontSize(d => d.size)
-                .spiral("archimedean")
+                .spiral("rectangular")
                 .on("end", draw);
 
             layout.start();
@@ -97,21 +105,34 @@
                 .style("font-size", d => d.size + "px")
                 .style("font-family", "Arial")
                 .attr("text-anchor", "middle")
-                .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+                .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
                 .attr("class", "word")
                 .text(d => d.word)
                 .on("click", showDialog);
 
             function animate() {
                 g.selectAll("text")
-                    .transition()
-                    .duration(3000)
-                    .attr("transform", d => {
-                        const x = d.x + (Math.random() - 0.5) * 10;
-                        const y = d.y + (Math.random() - 0.5) * 10;
-                        return "translate(" + [x, y] + ")rotate(" + d.rotate + ")";
+                    .filter(function() {
+                        return !this.classList.contains('discussed') && !this.classList.contains('passed');
                     })
-                    .on("end", animate);
+                    .attr("transform", function(d) {
+                        d.x += d.vx;
+                        d.y += d.vy;
+                        d.rotate += d.vr;
+
+                        // Abprallen von den Rändern
+                        if (Math.abs(d.x) > width / 2 - 50) d.vx *= -1;
+                        if (Math.abs(d.y) > height / 2 - 50) d.vy *= -1;
+
+                        // Größe ändern
+                        d.size += Math.random() * 0.5 - 0.25;
+                        d.size = Math.max(12, Math.min(40, d.size));
+                        d3.select(this).style("font-size", d.size + "px");
+
+                        return `translate(${d.x},${d.y})rotate(${d.rotate})`;
+                    });
+
+                requestAnimationFrame(animate);
             }
 
             animate();
@@ -132,8 +153,12 @@
         }
 
         function handleAction(element, action) {
+            const d = d3.select(element).datum();
+            d.size = 8;
+            d.vx = d.vy = d.vr = 0;
             element.classList.remove('discussed', 'passed');
             element.classList.add(action);
+            element.style.fontSize = d.size + "px";
             document.getElementById('dialog').style.display = 'none';
         }
 
