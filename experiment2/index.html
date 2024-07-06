@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beziehungs-Wordcloud</title>
+    <script src="relationship-topics.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #cloud {
+            width: 1200px;
+            height: 800px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .word {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .word.discussed, .word.passed { font-size: 8px !important; }
+        .word.discussed { fill: green; }
+        .word.passed { fill: gray; }
+        .dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .dialog h2 { margin-top: 0; }
+        .dialog ul { padding-left: 20px; }
+        .dialog button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="cloud"></div>
+    <div id="dialog" class="dialog">
+        <h2 id="dialogWord"></h2>
+        <ul id="dialogQuestions"></ul>
+        <button id="discussedBtn">Besprochen</button>
+        <button id="passBtn">Ich passe</button>
+        <button id="cancelBtn">Abbrechen</button>
+    </div>
+
+    <script src="relationship-topics.js"></script>
+    <script>
+        const width = 1200;
+        const height = 800;
+
+        const layout = d3.layout.cloud()
+            .size([width, height])
+            .words(relationshipTopics.map(d => ({...d, size: 14 + Math.random() * 24})))
+            .padding(2)
+            .rotate(() => Math.random() * 180 - 90)
+            .font("Arial")
+            .fontSize(d => d.size)
+            .spiral("archimedean")
+            .on("end", draw);
+
+        layout.start();
+
+        function draw(words) {
+            const svg = d3.select("#cloud").append("svg")
+                .attr("width", layout.size()[0])
+                .attr("height", layout.size()[1]);
+
+            const g = svg.append("g")
+                .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")");
+
+            g.selectAll("text")
+                .data(words)
+                .enter().append("text")
+                .style("font-size", d => d.size + "px")
+                .style("font-family", "Arial")
+                .attr("text-anchor", "middle")
+                .attr("transform", d => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")")
+                .attr("class", "word")
+                .text(d => d.word)
+                .on("click", showDialog);
+
+            // Animation
+            function animate() {
+                g.selectAll("text")
+                    .transition()
+                    .duration(3000)
+                    .attr("transform", d => {
+                        const x = d.x + (Math.random() - 0.5) * 10;
+                        const y = d.y + (Math.random() - 0.5) * 10;
+                        return "translate(" + [x, y] + ")rotate(" + d.rotate + ")";
+                    })
+                    .on("end", animate);
+            }
+
+            animate();
+        }
+
+        function showDialog(event, d) {
+            const dialog = document.getElementById('dialog');
+            const dialogWord = document.getElementById('dialogWord');
+            const dialogQuestions = document.getElementById('dialogQuestions');
+
+            dialogWord.textContent = d.word;
+            dialogQuestions.innerHTML = d.questions.map(q => `<li>${q}</li>`).join('');
+            dialog.style.display = 'block';
+
+            document.getElementById('discussedBtn').onclick = () => handleAction(event.target, 'discussed');
+            document.getElementById('passBtn').onclick = () => handleAction(event.target, 'passed');
+            document.getElementById('cancelBtn').onclick = () => dialog.style.display = 'none';
+        }
+
+        function handleAction(element, action) {
+            element.classList.remove('discussed', 'passed');
+            element.classList.add(action);
+            document.getElementById('dialog').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
