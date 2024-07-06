@@ -29,9 +29,7 @@ Hauptfunktionen:
 - Responsive Design
 - Themen-Markierung (besprochen/übersprungen)
 
-Kernfiles:
-- [index.html](experiment2/index.html): Hauptanwendung
-- [relationship-topics.js](experiment2/relationship-topics.js): Datendefinition
+- [index.html](https://stho32.github.io/WordCloud/experiment2/index.html): Hauptanwendung
 
 ## Technologien
 
