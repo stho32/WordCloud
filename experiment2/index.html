@@ -4,25 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beziehungs-Wordcloud</title>
-    <script src="relationship-topics.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        html, body {
             margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
         #cloud {
-            width: 1200px;
-            height: 800px;
+            width: 100%;
+            height: 100%;
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .word {
             cursor: pointer;
@@ -42,6 +39,9 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
             z-index: 1000;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
         }
         .dialog h2 { margin-top: 0; }
         .dialog ul { padding-left: 20px; }
@@ -64,28 +64,32 @@
 
     <script src="relationship-topics.js"></script>
     <script>
-        const width = 1200;
-        const height = 800;
+        let width = window.innerWidth;
+        let height = window.innerHeight;
 
-        const layout = d3.layout.cloud()
-            .size([width, height])
-            .words(relationshipTopics.map(d => ({...d, size: 14 + Math.random() * 24})))
-            .padding(2)
-            .rotate(() => Math.random() * 180 - 90)
-            .font("Arial")
-            .fontSize(d => d.size)
-            .spiral("archimedean")
-            .on("end", draw);
+        function createWordCloud() {
+            d3.select("#cloud").selectAll("*").remove();
 
-        layout.start();
+            const layout = d3.layout.cloud()
+                .size([width, height])
+                .words(relationshipTopics.map(d => ({...d, size: 14 + Math.random() * 24})))
+                .padding(2)
+                .rotate(() => Math.random() * 180 - 90)
+                .font("Arial")
+                .fontSize(d => d.size)
+                .spiral("archimedean")
+                .on("end", draw);
+
+            layout.start();
+        }
 
         function draw(words) {
             const svg = d3.select("#cloud").append("svg")
-                .attr("width", layout.size()[0])
-                .attr("height", layout.size()[1]);
+                .attr("width", width)
+                .attr("height", height);
 
             const g = svg.append("g")
-                .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")");
+                .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
             g.selectAll("text")
                 .data(words)
@@ -98,7 +102,6 @@
                 .text(d => d.word)
                 .on("click", showDialog);
 
-            // Animation
             function animate() {
                 g.selectAll("text")
                     .transition()
@@ -133,6 +136,14 @@
             element.classList.add(action);
             document.getElementById('dialog').style.display = 'none';
         }
+
+        createWordCloud();
+
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            createWordCloud();
+        });
     </script>
 </body>
 </html>
