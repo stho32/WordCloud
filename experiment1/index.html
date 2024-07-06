@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beziehungsfinder Wordcloud</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #wordcloud {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            width: 80%;
+            height: 70%;
+            overflow: auto;
+        }
+        .word {
+            margin: 10px;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #stats {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        #dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            display: none;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        #selectedWord {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #questions {
+            margin-bottom: 20px;
+        }
+        .button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="wordcloud"></div>
+    <div id="stats"></div>
+    <div id="dialog">
+        <div id="selectedWord"></div>
+        <div id="questions"></div>
+        <div id="category-buttons"></div>
+        <button class="button" onclick="closeDialog()">Abbrechen</button>
+    </div>
+
+    <script>
+        const relationshipTopics = {
+            "Humor": {
+                questions: [
+                    "Erzähle von einer Situation, in der du und dein Partner herzhaft zusammen gelacht haben.",
+                    "Beschreibe einen Witz oder eine lustige Situation, die nur ihr beide versteht.",
+                    "Wie reagierst du, wenn dein Partner einen Witz macht, den du nicht lustig findest?"
+                ]
+            },
+            "Ehrlichkeit": {
+                questions: [
+                    "Schildere eine Situation, in der du deinem Partner etwas Schwieriges ehrlich sagen musstest.",
+                    "Wann hast du dich das letzte Mal bei deinem Partner für eine Unehrlichkeit entschuldigt?",
+                    "Beschreibe eine Situation, in der du dankbar für die Ehrlichkeit deines Partners warst."
+                ]
+            },
+            "Vertrauen": {
+                questions: [
+                    "Erzähle von einem Moment, in dem dein Partner dein Vertrauen besonders gestärkt hat.",
+                    "Beschreibe eine Situation, in der du deinem Partner blind vertraut hast.",
+                    "Wann hast du das letzte Mal das Vertrauen deines Partners auf die Probe gestellt?"
+                ]
+            },
+            "Kommunikation": {
+                questions: [
+                    "Schildere ein kürzliches Gespräch mit deinem Partner, das besonders produktiv war.",
+                    "Beschreibe eine Situation, in der ihr ein Missverständnis durch gute Kommunikation gelöst habt.",
+                    "Wann hast du das letzte Mal deinem Partner aktiv zugehört, ohne zu unterbrechen?"
+                ]
+            },
+            "Respekt": {
+                questions: [
+                    "Erzähle von einer Situation, in der du dich von deinem Partner besonders respektiert gefühlt hast.",
+                    "Beschreibe, wie du kürzlich Respekt für die Meinung deines Partners gezeigt hast, auch wenn du anderer Ansicht warst.",
+                    "Wann hast du das letzte Mal die Grenzen deines Partners respektiert?"
+                ]
+            },
+            "Intimität": {
+                questions: [
+                    "Erzähle von einem besonders intimen Moment mit deinem Partner, der nicht sexuell war.",
+                    "Beschreibe eine Situation, in der ihr eure emotionale Intimität vertieft habt.",
+                    "Wann hast du das letzte Mal bewusst die Intimität in eurer Beziehung gefördert?"
+                ]
+            },
+            "Unterstützung": {
+                questions: [
+                    "Schildere eine konkrete Situation, in der du deinen Partner unterstützt hast.",
+                    "Beschreibe einen Moment, in dem die Unterstützung deines Partners dir besonders geholfen hat.",
+                    "Wann hast du das letzte Mal um Unterstützung von deinem Partner gebeten?"
+                ]
+            },
+            "Kompromisse": {
+                questions: [
+                    "Erzähle von einem kürzlichen Kompromiss, den ihr in eurer Beziehung geschlossen habt.",
+                    "Beschreibe eine Situation, in der du einen Kompromiss eingegangen bist, der dir schwer fiel.",
+                    "Wann hat dein Partner zuletzt einen bedeutenden Kompromiss für dich gemacht?"
+                ]
+            },
+            "Empathie": {
+                questions: [
+                    "Schildere eine Situation, in der du besonders einfühlsam auf die Gefühle deines Partners reagiert hast.",
+                    "Beschreibe einen Moment, in dem die Empathie deines Partners dich überrascht hat.",
+                    "Wann hast du das letzte Mal versucht, eine Situation aus der Perspektive deines Partners zu sehen?"
+                ]
+            },
+            "Freiheit": {
+                questions: [
+                    "Wie gestaltest du deine persönliche Freiheit innerhalb eurer Beziehung?",
+                    "Beschreibe eine Situation, in der du die Freiheit deines Partners respektiert hast.",
+                    "Wann fühlst du dich in deiner Freiheit eingeschränkt und wie kommunizierst du das?"
+                ]
+            }
+            // Fügen Sie hier weitere Themen und Fragen hinzu
+        };
+
+        const categories = {
+            "Offen": "lightgray",
+            "Besprochen": "lightgreen"
+        };
+
+        const wordcloud = document.getElementById('wordcloud');
+        const statsDisplay = document.getElementById('stats');
+        const dialog = document.getElementById('dialog');
+        const selectedWordElement = document.getElementById('selectedWord');
+        const questionsElement = document.getElementById('questions');
+        let stats = {
+            Offen: 0,
+            Besprochen: 0
+        };
+        let currentWord;
+
+        function createWords() {
+            Object.keys(relationshipTopics).forEach(word => {
+                const wordElement = document.createElement('div');
+                wordElement.className = 'word';
+                wordElement.textContent = word;
+                wordElement.style.backgroundColor = categories["Offen"];
+                wordElement.onclick = () => openDialog(word);
+                wordcloud.appendChild(wordElement);
+                stats.Offen++;
+            });
+            updateStatsDisplay();
+        }
+
+        function openDialog(word) {
+            currentWord = word;
+            selectedWordElement.textContent = word;
+            const wordQuestions = relationshipTopics[word].questions;
+            questionsElement.innerHTML = wordQuestions.map(q => `<p>${q}</p>`).join('');
+            dialog.style.display = 'block';
+        }
+
+        function closeDialog() {
+            dialog.style.display = 'none';
+        }
+
+        function createCategoryButtons() {
+            const categoryContainer = document.getElementById('category-buttons');
+            for (const category in categories) {
+                const button = document.createElement('button');
+                button.textContent = category;
+                button.onclick = () => changeCategory(category);
+                categoryContainer.appendChild(button);
+            }
+        }
+
+        function changeCategory(category) {
+            const wordElement = Array.from(wordcloud.children).find(el => el.textContent === currentWord);
+            const oldCategory = wordElement.style.backgroundColor === categories["Offen"] ? "Offen" : "Besprochen";
+            wordElement.style.backgroundColor = categories[category];
+            stats[oldCategory]--;
+            stats[category]++;
+            updateStatsDisplay();
+            dialog.style.display = 'none';
+        }
+
+        function updateStatsDisplay() {
+            statsDisplay.innerHTML = Object.entries(stats).map(([category, count]) => 
+                `${category}: ${count}`
+            ).join('<br>');
+        }
+
+        window.onload = () => {
+            createWords();
+            createCategoryButtons();
+        };
+    </script>
+</body>
+</html>
